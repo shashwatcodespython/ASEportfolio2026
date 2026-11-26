@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using HelixToolkit.Wpf;
@@ -22,6 +23,11 @@ namespace StellarExplorer1
 
         private bool _isCatalogueLoaded = false;
 
+        // Camera navigation settings.
+        private PerspectiveCamera? _camera;
+
+        private const double CameraMoveSpeed = 5.0;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -33,6 +39,9 @@ namespace StellarExplorer1
             ShowAllStarsCheckBox.Unchecked +=
                 ShowAllStarsCheckBox_Changed;
 
+            // Handle keyboard navigation.
+            PreviewKeyDown += MainWindow_PreviewKeyDown;
+
             // Load the stars after the window has loaded.
             Loaded += MainWindow_Loaded;
         }
@@ -40,6 +49,18 @@ namespace StellarExplorer1
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             LoadStars();
+
+            // Get the existing perspective camera.
+            _camera = viewport.Camera as PerspectiveCamera;
+
+            if (_camera == null)
+            {
+                MessageBox.Show(
+                    "The 3D viewport does not have a PerspectiveCamera.",
+                    "Camera Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         private void LoadStars()
@@ -71,7 +92,6 @@ namespace StellarExplorer1
 
                 // Display the stars using the current filter setting.
                 DisplayStars(true);
-
             }
             catch (Exception ex)
             {
@@ -279,6 +299,80 @@ namespace StellarExplorer1
             {
                 DisplayStars(false);
             }
+        }
+
+        // Handles keyboard navigation using the camera's local directions.
+        private void MainWindow_PreviewKeyDown(
+            object sender,
+            KeyEventArgs e)
+        {
+            if (_camera == null)
+            {
+                return;
+            }
+
+            Vector3D forward = _camera.LookDirection;
+
+            if (forward.LengthSquared < 0.000001)
+            {
+                return;
+            }
+
+            forward.Normalize();
+
+            Vector3D right = Vector3D.CrossProduct(
+                forward,
+                _camera.UpDirection);
+
+            if (right.LengthSquared < 0.000001)
+            {
+                return;
+            }
+
+            right.Normalize();
+
+            Vector3D localUp = Vector3D.CrossProduct(
+                right,
+                forward);
+
+            localUp.Normalize();
+
+            Vector3D movement;
+
+            switch (e.Key)
+            {
+                case Key.W:
+                    movement = forward;
+                    break;
+
+                case Key.S:
+                    movement = -forward;
+                    break;
+
+                case Key.A:
+                    movement = -right;
+                    break;
+
+                case Key.D:
+                    movement = right;
+                    break;
+
+                case Key.Q:
+                    movement = localUp;
+                    break;
+
+                case Key.E:
+                    movement = -localUp;
+                    break;
+
+                default:
+                    return;
+            }
+
+            // Move the camera without changing its orientation.
+            _camera.Position += movement * CameraMoveSpeed;
+
+            e.Handled = true;
         }
 
         // Creates a visual collection with the specified colour.
