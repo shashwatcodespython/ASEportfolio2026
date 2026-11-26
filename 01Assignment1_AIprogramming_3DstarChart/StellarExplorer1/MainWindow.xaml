@@ -18,9 +18,6 @@
             <!-- Default lighting -->
             <hv:DefaultLights />
 
-            <!-- 3D coordinate system -->
-            <hv:CoordinateSystemVisual3D />
-
         </hv:HelixViewport3D>
 
     </Grid>

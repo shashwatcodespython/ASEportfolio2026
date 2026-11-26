@@ -52,22 +52,23 @@ namespace StellarExplorer1
 
                 // Create separate visual collections for each spectral class.
                 PointsVisual3D oStars = CreateStarVisual(Colors.Blue);
-                PointsVisual3D bStars = CreateStarVisual(Color.FromRgb(170, 210, 255));
+                PointsVisual3D bStars = CreateStarVisual(
+                    Color.FromRgb(170, 210, 255));
                 PointsVisual3D aStars = CreateStarVisual(Colors.White);
-                PointsVisual3D fStars = CreateStarVisual(Color.FromRgb(255, 240, 180));
+                PointsVisual3D fStars = CreateStarVisual(
+                    Color.FromRgb(255, 240, 180));
                 PointsVisual3D gStars = CreateStarVisual(Colors.Yellow);
                 PointsVisual3D kStars = CreateStarVisual(Colors.Orange);
                 PointsVisual3D mStars = CreateStarVisual(Colors.Red);
                 PointsVisual3D unknownStars = CreateStarVisual(Colors.Gray);
 
                 int displayedCount = 0;
+                int namedStarCount = 0;
 
                 // Assign each star to its spectral-class collection.
                 foreach (Star star in stars)
                 {
-                    if (!double.IsFinite(star.X) ||
-                        !double.IsFinite(star.Y) ||
-                        !double.IsFinite(star.Z))
+                    if (!HasValidCoordinates(star))
                     {
                         continue;
                     }
@@ -77,8 +78,8 @@ namespace StellarExplorer1
                         star.Y,
                         star.Z);
 
-                    // Read the first character of the spectral class.
-                    string spectralClass = star.Spect.Trim().ToUpperInvariant();
+                    string spectralClass =
+                        star.Spect?.Trim().ToUpperInvariant() ?? "";
 
                     if (spectralClass.Length == 0)
                     {
@@ -135,8 +136,37 @@ namespace StellarExplorer1
                 viewport.Children.Add(mStars);
                 viewport.Children.Add(unknownStars);
 
+                // Add labels for stars with genuine proper names.
+                foreach (Star star in stars)
+                {
+                    if (!HasValidCoordinates(star) ||
+                        !HasProperName(star.Name))
+                    {
+                        continue;
+                    }
+
+                    BillboardTextVisual3D label =
+                        new BillboardTextVisual3D
+                        {
+                            Text = star.Name.Trim(),
+
+                            Position = new Point3D(
+                                star.X,
+                                star.Y,
+                                star.Z),
+
+                            Foreground = Brushes.White,
+                            Background = Brushes.Transparent,
+                            FontSize = 12
+                        };
+
+                    viewport.Children.Add(label);
+                    namedStarCount++;
+                }
+
                 // Update the application title.
-                Title = $"Stellar Explorer - {displayedCount} Stars Displayed";
+                Title = $"Stellar Explorer - {displayedCount} Stars | " +
+                        $"{namedStarCount} Named Stars";
 
                 // Adjust the camera to display all stars.
                 viewport.ZoomExtents();
@@ -168,6 +198,55 @@ namespace StellarExplorer1
                 Color = color,
                 Size = 6
             };
+        }
+
+        // Checks whether the star has valid 3D coordinates.
+        private bool HasValidCoordinates(Star star)
+        {
+            return double.IsFinite(star.X) &&
+                   double.IsFinite(star.Y) &&
+                   double.IsFinite(star.Z);
+        }
+
+        // Identifies genuine proper names and excludes catalogue identifiers.
+        private bool HasProperName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+
+            string trimmedName = name.Trim();
+
+            if (trimmedName.Equals(
+                "Unknown",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string[] cataloguePrefixes =
+            {
+                "HIP-",
+                "HD-",
+                "HR-",
+                "Gl-",
+                "Bayer-",
+                "Flamsteed-",
+                "STAR-"
+            };
+
+            foreach (string prefix in cataloguePrefixes)
+            {
+                if (trimmedName.StartsWith(
+                    prefix,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }
