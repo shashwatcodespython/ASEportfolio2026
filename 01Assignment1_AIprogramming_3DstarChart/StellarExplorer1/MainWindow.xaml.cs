@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -14,9 +15,23 @@ namespace StellarExplorer1
     /// </summary>
     public partial class MainWindow : Window
     {
+        private List<Star> _stars = new List<Star>();
+
+        private readonly List<Visual3D> _starVisuals =
+            new List<Visual3D>();
+
+        private bool _isCatalogueLoaded = false;
+
         public MainWindow()
         {
             InitializeComponent();
+
+            // Respond to changes in the star filter checkbox.
+            ShowAllStarsCheckBox.Checked +=
+                ShowAllStarsCheckBox_Changed;
+
+            ShowAllStarsCheckBox.Unchecked +=
+                ShowAllStarsCheckBox_Changed;
 
             // Load the stars after the window has loaded.
             Loaded += MainWindow_Loaded;
@@ -47,28 +62,79 @@ namespace StellarExplorer1
                 }
 
                 // Load the star collection.
-                StarCollection starCollection = new StarCollection(filePath);
-                var stars = starCollection.GetLoadedStars();
+                StarCollection starCollection =
+                    new StarCollection(filePath);
+
+                _stars = starCollection.GetLoadedStars();
+
+                _isCatalogueLoaded = true;
+
+                // Display the stars using the current filter setting.
+                DisplayStars(true);
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"An error occurred while loading the star catalogue:\n{ex.Message}",
+                    "Loading Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        // Rebuilds the star chart according to the checkbox setting.
+        private void DisplayStars(bool zoomToExtents)
+        {
+            try
+            {
+                // Remove previously displayed star visuals.
+                foreach (Visual3D visual in _starVisuals)
+                {
+                    viewport.Children.Remove(visual);
+                }
+
+                _starVisuals.Clear();
 
                 // Create separate visual collections for each spectral class.
                 PointsVisual3D oStars = CreateStarVisual(Colors.Blue);
+
                 PointsVisual3D bStars = CreateStarVisual(
                     Color.FromRgb(170, 210, 255));
+
                 PointsVisual3D aStars = CreateStarVisual(Colors.White);
+
                 PointsVisual3D fStars = CreateStarVisual(
                     Color.FromRgb(255, 240, 180));
+
                 PointsVisual3D gStars = CreateStarVisual(Colors.Yellow);
+
                 PointsVisual3D kStars = CreateStarVisual(Colors.Orange);
+
                 PointsVisual3D mStars = CreateStarVisual(Colors.Red);
+
                 PointsVisual3D unknownStars = CreateStarVisual(Colors.Gray);
+
+                bool showAllStars =
+                    ShowAllStarsCheckBox.IsChecked == true;
 
                 int displayedCount = 0;
                 int namedStarCount = 0;
 
-                // Assign each star to its spectral-class collection.
-                foreach (Star star in stars)
+                List<Star> displayedStars = new List<Star>();
+
+                // Assign stars to their spectral-class collections.
+                foreach (Star star in _stars)
                 {
                     if (!HasValidCoordinates(star))
+                    {
+                        continue;
+                    }
+
+                    bool hasProperName = HasProperName(star.Name);
+
+                    // Hide unnamed stars when the filter is unchecked.
+                    if (!showAllStars && !hasProperName)
                     {
                         continue;
                     }
@@ -123,24 +189,29 @@ namespace StellarExplorer1
                         }
                     }
 
+                    displayedStars.Add(star);
                     displayedCount++;
+
+                    if (hasProperName)
+                    {
+                        namedStarCount++;
+                    }
                 }
 
                 // Add the coloured star collections to the viewport.
-                viewport.Children.Add(oStars);
-                viewport.Children.Add(bStars);
-                viewport.Children.Add(aStars);
-                viewport.Children.Add(fStars);
-                viewport.Children.Add(gStars);
-                viewport.Children.Add(kStars);
-                viewport.Children.Add(mStars);
-                viewport.Children.Add(unknownStars);
+                AddStarVisual(oStars);
+                AddStarVisual(bStars);
+                AddStarVisual(aStars);
+                AddStarVisual(fStars);
+                AddStarVisual(gStars);
+                AddStarVisual(kStars);
+                AddStarVisual(mStars);
+                AddStarVisual(unknownStars);
 
                 // Add labels for stars with genuine proper names.
-                foreach (Star star in stars)
+                foreach (Star star in displayedStars)
                 {
-                    if (!HasValidCoordinates(star) ||
-                        !HasProperName(star.Name))
+                    if (!HasProperName(star.Name))
                     {
                         continue;
                     }
@@ -160,33 +231,53 @@ namespace StellarExplorer1
                             FontSize = 12
                         };
 
-                    viewport.Children.Add(label);
-                    namedStarCount++;
+                    AddStarVisual(label);
                 }
 
                 // Update the application title.
                 Title = $"Stellar Explorer - {displayedCount} Stars | " +
                         $"{namedStarCount} Named Stars";
 
-                // Adjust the camera to display all stars.
-                viewport.ZoomExtents();
+                // Zoom to all stars only during the initial display.
+                if (zoomToExtents)
+                {
+                    viewport.ZoomExtents();
+                }
 
                 if (displayedCount == 0)
                 {
                     MessageBox.Show(
-                        "No valid star coordinates were found.",
+                        "No stars match the current filter.",
                         "No Stars Found",
                         MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"An error occurred while loading the star catalogue:\n{ex.Message}",
-                    "Loading Error",
+                    $"An error occurred while displaying the stars:\n{ex.Message}",
+                    "Display Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+        }
+
+        // Adds a visual to the viewport and tracks it for later removal.
+        private void AddStarVisual(Visual3D visual)
+        {
+            viewport.Children.Add(visual);
+            _starVisuals.Add(visual);
+        }
+
+        // Handles changes to the star filter checkbox.
+        private void ShowAllStarsCheckBox_Changed(
+            object sender,
+            RoutedEventArgs e)
+        {
+            if (_isCatalogueLoaded)
+            {
+                DisplayStars(false);
             }
         }
 
