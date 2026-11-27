@@ -1234,6 +1234,511 @@ The AI assistant provided an initial discussion of possible label-placement tech
 
 This task showed that AI-generated technical recommendations should be checked against the actual library API. The assistant suggested classes and properties without demonstrating that they were suitable for the installed package. I therefore evaluated the suggestions instead of implementing them immediately. This helped me focus on a simpler solution that fitted the existing application structure and avoided unnecessary custom classes.
 
+## 1.9 Implementing Labels for Genuine Star Names
+
+| **Item** | **Details** |
+|---|---|
+| **Feature** | Feature 2 – Visualising the Star Chart |
+| **Task** | Display proper star names beside their corresponding 3D positions |
+| **AI system** | Llama 3.2 3B Instruct |
+| **AI integration** | AI Studio extension in Visual Studio |
+| **Library** | HelixToolkit.Wpf 3.1.2 |
+| **File** | `MainWindow.xaml.cs` |
+| **Purpose** | Display genuine star names without overcrowding the 3D chart with catalogue identifiers. |
+
+**Original AI Prompt**
+
+```text
+I want to implement Option A for my StellarExplorer1 WPF application.
+
+Display labels only for stars that have proper names. Do not display generated catalogue names such as HIP-, HD-, HR-, Gl- or STAR- identifiers.
+
+Project details:
+- WPF application using .NET 10.
+- HelixToolkit.Wpf version 3.1.2.
+- Star data loaded from bigstarchart.csv.
+- Existing Star class has properties Id, Name, Distance, X, Y, Z, Magnitude and Spect.
+- Existing StarCollection class loads 2,000 stars.
+- MainWindow.xaml.cs currently displays stars using separate PointsVisual3D collections for spectral-class colours.
+- The viewport supports mouse rotation and zoom.
+
+Requirements:
+1. Use BillboardTextVisual3D if supported by HelixToolkit.Wpf 3.1.2.
+2. Display labels only for stars with genuine proper names.
+3. Do not display generated catalogue identifiers.
+4. Place each label near its corresponding star using its X, Y and Z coordinates.
+5. Preserve all existing spectral-class colours.
+6. Preserve existing camera controls.
+7. Do not modify Star.cs or StarCollection.cs.
+8. Avoid unnecessary custom classes.
+
+First, explain how to identify genuine proper names using the existing Star.Name property and how BillboardTextVisual3D works in this version.
+
+Then provide the complete revised MainWindow.xaml.cs, keeping all existing functionality.
+
+If any proposed HelixToolkit API or property is uncertain, identify that uncertainty rather than inventing it.
+```
+
+**Complete AI Response – Explanation**
+
+The AI assistant suggested identifying genuine proper names by checking the existing `Star.Name` property.
+
+The proposed filtering approach was:
+
+1. Check for empty strings.
+2. Exclude names beginning with `HIP-`.
+3. Exclude names beginning with `HD-`.
+4. Exclude names beginning with `HR-`.
+5. Exclude names beginning with `Gl-`.
+6. Exclude names beginning with `STAR-`.
+
+The AI assistant also suggested using `BillboardTextVisual3D` to display text labels near the corresponding star positions.
+
+It stated that the class appeared to have been maintained in the HelixToolkit WPF library, but acknowledged that compatibility with version 3.1.2 had not been explicitly verified.
+
+**Complete AI Response – Generated Code**
+
+```csharp
+using System;
+using System.IO;
+using System.Windows.Media.Media3D;
+using HelixToolkit.Wpf;
+
+namespace StellarExplorer1
+{
+    public partial class MainWindow : Window
+    {
+        private StarCollection _starCollection = null;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            try
+            {
+                string filePath = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    "bigstarchart.csv");
+
+                var starsLoaded = new List<Star>();
+
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException(
+                        $"The CSV file '{filePath}' does not exist.");
+                }
+
+                _starCollection = new StarCollection(filePath);
+                starsLoaded = _starCollection.GetLoadedStars();
+
+                PointSize = 1.0;
+                Title = $"Stellar Explorer - {starsLoaded.Count} Stars";
+
+                var pointsVisual3D = new PointsVisual3D
+                {
+                    Colors = Brushes.White,
+                    PointSize = 0.2f
+                };
+
+                foreach (var star in starsLoaded)
+                {
+                    string name = star.Name;
+
+                    if (string.IsNullOrEmpty(name) ||
+                        name.StartsWith("HIP-") ||
+                        name.StartsWith("HD-") ||
+                        name.StartsWith("HR-") ||
+                        name.StartsWith("Gl-") ||
+                        name.StartsWith("STAR-"))
+                    {
+                        continue;
+                    }
+
+                    Media3D.Point3D point =
+                        new Media3D.Point3D(star.X, star.Y, star.Z);
+
+                    pointsVisual3D.Points.Add(point);
+
+                    var billboardLabel = new BillboardTextVisual3D
+                    {
+                        Content = name,
+                        PointPosition = Enum.GetValues(
+                                typeof(BillboardTextAlignment))
+                            .Cast<BillboardTextAlignment>()
+                            .First(al ->
+                                al == BillboardTextAlignment.Center)
+                    };
+
+                    pointsVisual3D.Content =
+                        new VisualCollection { billboardLabel };
+
+                    switch ((StarColors)Enum.Parse(
+                        typeof(StarColors), star.Spect))
+                    {
+                        case StarColors.O:
+                            billboardLabel.Color = Brushes.Blue;
+                            break;
+
+                        case StarColors.B:
+                            billboardLabel.Color = Brushes.BlueWhite;
+                            break;
+
+                        case StarColors.A:
+                            billboardLabel.Color = Brushes.White;
+                            break;
+
+                        case StarColors.F:
+                            billboardLabel.Color = Brushes.YellowWhite;
+                            break;
+
+                        case StarColors.G:
+                            billboardLabel.Color = Brushes.Yellow;
+                            break;
+
+                        case StarColors.K:
+                            billboardLabel.Color = Brushes.Orange;
+                            break;
+
+                        case StarColors.M:
+                            billboardLabel.Color = Brushes.Red;
+                            break;
+                    }
+                }
+
+                viewport.Content = pointsVisual3D;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"An error occurred while loading the CSV file: {ex.Message}");
+
+                Environment.Exit(1);
+            }
+        }
+    }
+}
+```
+
+**Developer Review and Identified Problems**
+
+The generated implementation contained several problems and could not be used unchanged.
+
+1. The code attempted to set `PointSize` directly instead of configuring the relevant visual.
+2. It used `Brushes.BlueWhite` and `Brushes.YellowWhite`, which are not standard predefined WPF brushes.
+3. It used `star.Spect` to parse an enum, which could fail for values containing additional spectral information or unexpected text.
+4. It attempted to assign a visual collection to `pointsVisual3D.Content`, which was not the appropriate way to add multiple independent labels to the viewport.
+5. It used `BillboardTextAlignment`, `PointPosition` and other members without demonstrating that these were valid properties for the installed package version.
+6. It did not correctly preserve the existing spectral-colour rendering structure.
+7. The filtering code did not check all possible generated catalogue-name prefixes used by the application.
+
+**Developer Review and Implementation Decisions**
+
+The existing `Star.Name` property was sufficient to identify which stars should receive labels. There was no need to modify `Star.cs` or `StarCollection.cs`.
+
+The final application used a proper-name filtering method to exclude generated catalogue identifiers. Labels were created using `BillboardTextVisual3D` and positioned using the corresponding star coordinates.
+
+The label implementation was kept separate from the spectral-class point visuals so that adding labels would not replace the existing coloured star points.
+
+The application also retained the existing mouse camera controls.
+
+**Testing**
+
+The application was built and tested. Properly named stars were displayed with labels, while generated catalogue names were excluded.
+
+**Outcome**
+
+The 3D star chart was extended to display genuine star names without displaying labels for every catalogue record.
+
+**Reflection**
+
+The AI assistant identified a useful approach for filtering names and suggested a suitable type of 3D text visual. However, its generated code contained incorrect property usage and did not correctly manage multiple labels. I reviewed these problems and implemented the label functionality using the existing star model and the application's existing viewport structure.
+
+---
+
+## 1.10 Planning Keyboard Navigation
+
+| **Item** | **Details** |
+|---|---|
+| **Feature** | Feature 2 – Visualising the Star Chart |
+| **Task** | Plan keyboard navigation for the 3D camera |
+| **AI system** | Llama 3.2 3B Instruct |
+| **AI integration** | AI Studio extension in Visual Studio |
+| **Framework** | WPF with .NET 10 |
+| **Library** | HelixToolkit.Wpf 3.1.2 |
+| **Purpose** | Allow users to navigate the 3D star chart using the keyboard. |
+
+**Original AI Prompt**
+
+```text
+I am developing a WPF 3D star-chart application using C#, .NET 10 and HelixToolkit.Wpf 3.1.2.
+
+My current MainWindow.xaml.cs already:
+- Loads 2,000 stars from a CSV file.
+- Displays stars using PointsVisual3D.
+- Uses spectral-class colours.
+- Displays proper-name labels using BillboardTextVisual3D.
+- Provides an interactive checkbox to show all stars or only stars with genuine proper names.
+- Uses HelixViewport3D named viewport.
+
+I want to add keyboard navigation to the 3D star chart.
+
+Propose a safe implementation for these controls:
+- W/S: move the camera forward/backward.
+- A/D: move the camera left/right.
+- Q/E: move the camera up/down.
+- Arrow keys: rotate the view.
+
+Requirements:
+1. Preserve all existing functionality.
+2. Preserve mouse rotation, panning and zoom.
+3. Use the existing HelixToolkit.Wpf 3.1.2 API.
+4. Do not introduce unnecessary dependencies.
+5. Explain which methods and event handlers need to be added.
+6. Do not rewrite unrelated code.
+7. Do not assume an API exists without verifying its compatibility with HelixToolkit.Wpf 3.1.2.
+
+Please provide the proposed code and explain how it works. I will review it before implementing it.
+```
+
+**Complete AI Response – Initial Proposal**
+
+The AI assistant proposed using keyboard events and HelixToolkit camera-control functionality.
+
+It suggested:
+
+1. Handling `KeyDown` and `KeyUp` events.
+2. Using HelixToolkit camera navigation methods.
+3. Modifying the viewport camera to support keyboard movement and rotation.
+
+**Generated Code**
+
+The initial generated response included calls such as:
+
+```csharp
+viewport.CameraController.MoveForward();
+viewport.CameraController.MoveBackward();
+viewport.CameraController.MoveLeft();
+viewport.CameraController.MoveRight();
+viewport.CameraController.MoveUp();
+viewport.CameraController.MoveDown();
+```
+
+It also proposed using `ViewportCameraController` commands and additional keyboard-navigation events.
+
+**Developer Review and Identified Problems**
+
+The response did not establish that the suggested methods and commands were supported by HelixToolkit.Wpf 3.1.2.
+
+The proposed code also introduced:
+
+- Undefined variables and properties.
+- Unverified camera-controller methods.
+- Unverified keyboard-navigation event arguments.
+- Unnecessary event handlers.
+- Keyboard rotation commands that were not properly explained.
+
+The code did not provide a sufficiently reliable implementation for the existing application.
+
+**Developer Decision**
+
+I rejected the proposed implementation because it rewrote parts of the application and relied on unverified HelixToolkit APIs.
+
+I decided to focus on the standard WPF camera properties instead of introducing additional dependencies or relying on undocumented navigation methods.
+
+---
+
+## 1.11 Refining Keyboard Navigation Using Standard WPF Camera Properties
+
+| **Item** | **Details** |
+|---|---|
+| **Feature** | Feature 2 – Visualising the Star Chart |
+| **Task** | Move the existing 3D camera using keyboard input |
+| **AI system** | Llama 3.2 3B Instruct |
+| **AI integration** | AI Studio extension in Visual Studio |
+| **Framework** | WPF with .NET 10 |
+| **Library** | HelixToolkit.Wpf 3.1.2 |
+| **Purpose** | Implement keyboard movement without changing the existing camera-control system. |
+
+**Follow-up AI Prompt**
+
+```text
+I rejected your previous implementation because it rewrote my existing application and introduced unverified HelixToolkit APIs.
+
+Please focus ONLY on keyboard navigation.
+
+My application uses:
+- WPF with .NET 10.
+- HelixToolkit.Wpf version 3.1.2.
+- A HelixViewport3D named viewport.
+- The existing viewport camera and mouse controls already work correctly.
+
+I need keyboard navigation using W, A, S, D, Q and E.
+
+Please:
+1. Explain how to access the existing PerspectiveCamera through viewport.Camera.
+2. Show how to move its Position and LookDirection safely.
+3. Provide a small standalone C# method for moving the camera in six directions.
+4. Explain how to connect Window KeyDown events to that method.
+5. Explain how to preserve the camera's existing orientation.
+6. Do not rewrite MainWindow.xaml.cs.
+7. Do not invent HelixToolkit APIs. Use standard WPF camera properties where possible.
+
+Do not implement arrow-key rotation yet. Focus only on camera movement.
+```
+
+**Complete AI Response – Revised Explanation and Code**
+
+The AI assistant suggested accessing the existing camera through `viewport.Camera`.
+
+It proposed the following camera declaration:
+
+```csharp
+private PerspectiveCamera _camera =
+    (PerspectiveCamera)viewport.Camera;
+```
+
+It then suggested moving the camera using a `Vector3`:
+
+```csharp
+public void MoveCamera(double deltaX, double deltaY)
+{
+    Vector3 movement = new Vector3(deltaX, deltaY, 0);
+    _camera.Position += movement;
+}
+```
+
+For a standalone movement method, it proposed:
+
+```csharp
+public static void MoveCameraInDirection(
+    Window window,
+    PerspectiveCamera camera,
+    double directionX,
+    double directionY)
+{
+    Vector3 movement =
+        new Vector3(directionX, directionY, 0);
+
+    camera.Position += movement;
+}
+```
+
+It also suggested connecting keyboard input using a `KeyDown` event:
+
+```csharp
+private void window_KeyDown(
+    object sender,
+    KeyEventArgs e)
+{
+    switch (e.Key)
+    {
+        case Key.W:
+            MoveCameraInDirection(window, _camera, 0, -1);
+            break;
+
+        case Key.S:
+            MoveCameraInDirection(window, _camera, 0, 1);
+            break;
+
+        case Key.A:
+            MoveCameraInDirection(window, _camera, -1, 0);
+            break;
+
+        case Key.D:
+            MoveCameraInDirection(window, _camera, 1, 0);
+            break;
+
+        case Key.Q:
+            MoveCameraInDirection(window, _camera, 0, 1);
+            break;
+
+        case Key.E:
+            MoveCameraInDirection(window, _camera, 0, -1);
+            break;
+    }
+}
+```
+
+Finally, the AI assistant proposed restoring camera orientation with:
+
+```csharp
+public void RestoreCameraOrientation()
+{
+    _camera.Rotation = viewport.Rotation;
+}
+```
+
+**Developer Review and Identified Problems**
+
+Although this response moved away from unverified HelixToolkit navigation methods, it still contained several issues:
+
+1. The camera field was initialised directly from `viewport.Camera`, which may not be ready at field-initialisation time.
+2. It used `Vector3` rather than the WPF `Vector3D` type expected by `PerspectiveCamera.Position`.
+3. The movement method accepted only two movement values and did not properly support all six directions.
+4. The proposed movement was based on fixed world axes rather than the camera's current orientation.
+5. It did not update `LookDirection`, although moving `Position` alone can preserve the viewing direction because the look direction is relative to the camera position.
+6. The proposed `Rotation` property and `viewport.Rotation` usage were not valid standard `PerspectiveCamera` properties.
+7. The example referenced a `window` variable that was not defined in the supplied code.
+8. The proposed constructor example used invalid method naming and syntax.
+
+**Developer Review and Implementation Decisions**
+
+The final implementation used the standard WPF `PerspectiveCamera` properties rather than relying on additional HelixToolkit navigation APIs.
+
+The camera was obtained from `viewport.Camera` after the viewport had loaded.
+
+The movement was calculated relative to the camera's current orientation using its `LookDirection` and `UpDirection`. A right-direction vector was calculated from these vectors, allowing the camera to move relative to the direction in which the user was looking.
+
+The keyboard controls were implemented as follows:
+
+| **Key** | **Movement** |
+|---|---|
+| W | Forward |
+| S | Backward |
+| A | Left |
+| D | Right |
+| Q | Up |
+| E | Down |
+
+The camera position was adjusted using a movement vector and a movement-speed value. This avoided changing the existing camera orientation when moving through the 3D scene.
+
+The `PreviewKeyDown` event was used to handle keyboard input in the WPF window.
+
+**Final Implementation Overview**
+
+The implemented navigation used:
+
+- `PerspectiveCamera` to access the existing camera.
+- `Position` to move the camera through 3D space.
+- `LookDirection` to calculate forward and backward movement.
+- `UpDirection` to calculate vertical and right-direction movement.
+- `Vector3D` for the movement calculations.
+- `PreviewKeyDown` to respond to keyboard input.
+
+The camera movement was kept separate from the star-loading and star-rendering code.
+
+**Testing**
+
+The application was built and tested in Visual Studio.
+
+The following keyboard controls were confirmed to work:
+
+- W and S moved the camera forward and backward.
+- A and D moved the camera left and right.
+- Q and E moved the camera up and down.
+
+The existing mouse rotation, panning and zoom controls continued to work.
+
+**Outcome**
+
+Keyboard navigation was successfully added to the 3D star chart without introducing additional dependencies or changing the existing star model and collection classes.
+
+**Reflection**
+
+The initial AI responses proposed unverified HelixToolkit APIs and contained incorrect WPF camera code. By rejecting those suggestions and narrowing the task to standard WPF camera properties, I was able to develop a simpler implementation. This process helped me understand camera position, direction vectors, camera-relative movement and WPF keyboard event handling.
+
+
+
 ---
 
 Feature 2 – 3D Visualising the Star Chart
