@@ -614,6 +614,626 @@ The initial HelixToolkit viewport was successfully integrated into StellarExplor
 
 The AI assistant helped me understand how to integrate HelixToolkit into a WPF application using XAML. However, I did not use every part of the generated code unchanged. I reviewed the lighting and event-handler configuration and adapted the viewport to suit the project. This demonstrated the importance of checking AI-generated XAML against the actual library and application requirements.
 
+## 1.5 Refining the HelixToolkit 3D Viewport
+
+| **Item** | **Details** |
+|---|---|
+| **Feature** | Feature 2 – Visualising the Star Chart |
+| **Task** | Refine the initial 3D viewport and add a coordinate system |
+| **AI system** | Llama 3.2 3B Instruct |
+| **AI integration** | AI Studio extension in Visual Studio |
+| **Library** | HelixToolkit.Wpf 3.1.2 |
+| **File** | `MainWindow.xaml` |
+| **Purpose** | Configure the viewport with lighting, a coordinate system and standard camera controls. |
+
+**Original AI Prompt**
+
+```text
+I am developing a WPF desktop application called StellarExplorer1 using C# and .NET 10.
+
+The NuGet package HelixToolkit.Wpf version 3.1.2 is already installed.
+
+My current MainWindow.xaml is:
+
+<Window x:Class="StellarExplorer1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:StellarExplorer1"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+    </Grid>
+</Window>
+
+TASK:
+
+Return the complete revised MainWindow.xaml that creates a basic 3D viewport using HelixToolkit.Wpf 3.1.2.
+
+Requirements:
+1. Declare the correct HelixToolkit XML namespace.
+2. Add a HelixViewport3D inside the existing Grid.
+3. Add DefaultLights.
+4. Add CoordinateSystemVisual3D.
+5. Allow standard HelixToolkit mouse rotation, zooming and panning.
+6. Do not add mouse event handlers or require any changes to MainWindow.xaml.cs.
+7. Do not add stars or CSV loading yet.
+8. Keep the code compatible with HelixToolkit.Wpf 3.1.2.
+
+Explain the changes briefly.
+```
+
+**Complete AI Response – Generated XAML**
+
+```xml
+<Window x:Class="StellarExplorer1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:hv="clr-namespace:HelixToolkit.Wpf;assembly=HelixToolkit.Wpf"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <hv:HelixViewport3D x:Name="viewport" DefaultLights="True" CoordinateSystemVisual3D="{Binding}" MouseMoveEnabled="True" />
+    </Grid>
+</Window>
+```
+
+**AI Response – Explanation**
+
+The AI assistant explained that:
+
+1. The `hv` XML namespace provides access to HelixToolkit controls.
+2. `HelixViewport3D` creates the main 3D viewing area.
+3. The `DefaultLights` property enables default lighting.
+4. `CoordinateSystemVisual3D` provides a visual coordinate system.
+5. Mouse interaction is intended to support rotation, zooming and panning.
+
+**Developer Review and Corrections**
+
+The generated XAML required further review. Although the response described the required components, it did not correctly demonstrate how to add `DefaultLights` and `CoordinateSystemVisual3D` as visual elements inside the viewport.
+
+The response also used `CoordinateSystemVisual3D="{Binding}"`, which was not the correct way to add the coordinate-system visual.
+
+The intended structure was to place the lighting and coordinate-system elements inside `HelixViewport3D` as child elements. The viewport's standard mouse interaction did not require manually adding mouse event handlers.
+
+**Final Implementation Decision**
+
+The application was subsequently configured with `HelixViewport3D` and `DefaultLights`. The final viewport was kept simple so that the star-rendering functionality could be implemented separately.
+
+**Outcome**
+
+The AI-generated XAML provided a starting point for understanding the HelixToolkit viewport. Its incorrect property usage was identified during review, and the viewport was adapted before further development.
+
+**Reflection**
+
+This task demonstrated that AI-generated XAML should not be accepted without checking the actual structure and supported properties of the installed library. I learned to distinguish between properties and visual elements that need to be placed inside a viewport.
+
+---
+
+## 1.6 First Version of 3D Star Rendering
+
+| **Item** | **Details** |
+|---|---|
+| **Feature** | Feature 2 – Visualising the Star Chart |
+| **Task** | Load the star catalogue and render stars as 3D points |
+| **AI system** | Llama 3.2 3B Instruct |
+| **AI integration** | AI Studio extension in Visual Studio |
+| **Library** | HelixToolkit.Wpf 3.1.2 |
+| **Files** | `MainWindow.xaml.cs`, `Star.cs`, `StarCollection.cs` |
+| **Purpose** | Display the loaded star catalogue in the 3D viewport. |
+
+**Original AI Prompt**
+
+```text
+I am developing a WPF application called StellarExplorer1 using C# and .NET 10.
+
+I have installed HelixToolkit.Wpf version 3.1.2.
+
+My project already contains:
+- Models/Star.cs
+- Models/StarCollection.cs
+- MainWindow.xaml
+- MainWindow.xaml.cs
+- bigstarchart.csv
+
+The CSV file has its Build Action set to Content and Copy to Output Directory set to Copy if newer.
+
+My current MainWindow.xaml contains:
+
+<Window x:Class="StellarExplorer1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:hv="clr-namespace:HelixToolkit.Wpf;assembly=HelixToolkit.Wpf"
+        mc:Ignorable="d"
+        Title="Stellar Explorer - 3D Star Chart"
+        Height="600"
+        Width="1000">
+
+    <Grid>
+        <hv:HelixViewport3D x:Name="viewport">
+            <hv:DefaultLights />
+            <hv:CoordinateSystemVisual3D />
+        </hv:HelixViewport3D>
+    </Grid>
+</Window>
+
+The Star class is in namespace StellarExplorer1.Models and has these properties:
+
+- Id
+- Name
+- Distance
+- X
+- Y
+- Z
+- Magnitude
+- Spect
+
+The StarCollection class is also in namespace StellarExplorer1.Models. It has a constructor accepting a CSV file path and a method called GetLoadedStars() that returns List<Star>.
+
+TASK:
+
+Implement the first version of 3D star rendering by revising MainWindow.xaml.cs.
+
+Requirements:
+
+1. Load the CSV using StarCollection.
+2. Find the CSV file in the application's output directory using AppDomain.CurrentDomain.BaseDirectory.
+3. Use HelixToolkit's PointsVisual3D to represent the stars.
+4. Convert each star's X, Y and Z coordinates into a System.Windows.Media.Media3D.Point3D.
+5. Display all successfully loaded stars in the existing HelixViewport3D named viewport.
+6. Use a single visible colour for all stars for now.
+7. Set an appropriate point size so the stars can be seen.
+8. Update the window title to display the number of loaded stars.
+9. Handle a missing CSV file gracefully with a clear error message.
+10. Keep the implementation compatible with WPF and HelixToolkit.Wpf 3.1.2.
+
+Do not modify Star.cs, StarCollection.cs or MainWindow.xaml.
+
+Return the complete revised MainWindow.xaml.cs file and briefly explain the implementation.
+```
+
+**Complete AI Response – Generated Code**
+
+```csharp
+using System;
+using System.IO;
+using System.Windows.Media.Media3D;
+using HelixToolkit.Wpf;
+
+namespace StellarExplorer1
+{
+    public partial class MainWindow : Window
+    {
+        private StarCollection _starCollection = null;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            try
+            {
+                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bigstarchart.csv");
+                var starsLoaded = new List<Star>();
+
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException($"The CSV file '{filePath}' does not exist.");
+                }
+
+                _starCollection = new StarCollection(filePath);
+                starsLoaded = _starCollection.GetLoadedStars();
+
+                PointSize = 1.0;
+                Title = $"Stellar Explorer - {starsLoaded.Count} Stars";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occurred while loading the CSV file: {ex.Message}");
+                Environment.Exit(1);
+            }
+
+            var pointsVisual3D = new PointsVisual3D
+            {
+                Colors = Brushes.White,
+                PointSize = 0.2f
+            };
+
+            foreach (var star in starsLoaded)
+            {
+                Media3D.Point3D point = new Media3D.Point3D(star.X, star.Y, star.Z);
+                pointsVisual3D.Points.Add(point);
+            }
+
+            viewport.Content = pointsVisual3D;
+        }
+    }
+}
+```
+
+**AI Response – Explanation**
+
+The AI assistant explained that the implementation:
+
+- Uses `AppDomain.CurrentDomain.BaseDirectory` to locate the CSV file in the output directory.
+- Uses `StarCollection` to load the star records.
+- Uses `PointsVisual3D` to represent stars in the viewport.
+- Converts each star's coordinates into a `Point3D`.
+- Uses white as the initial colour for the stars.
+- Updates the window title with the number of loaded stars.
+- Displays an error message if the CSV file cannot be found.
+
+**Developer Review and Identified Problems**
+
+The generated code contained several problems and could not be used unchanged.
+
+The following issues were identified:
+
+1. The `System.Windows` namespace was missing, which is needed for `Window` and `MessageBox`.
+2. The `System.Collections.Generic` namespace was missing for `List<Star>`.
+3. The `StellarExplorer1.Models` namespace was missing for `Star` and `StarCollection`.
+4. The variable `starsLoaded` was declared inside the `try` block but used outside it.
+5. `PointSize` was assigned directly, rather than being set on the `PointsVisual3D` object.
+6. `Brushes` was used without importing `System.Windows.Media`.
+7. The code used `Media3D.Point3D` even though the relevant namespace had already been imported.
+8. The code assigned `viewport.Content`, which needed to be checked against the actual viewport structure and existing XAML.
+
+These issues showed that the AI response was not a complete, directly compilable implementation.
+
+**Developer Review and Implementation Decisions**
+
+The generated code was used as a starting point for understanding how to render the stars with HelixToolkit.
+
+The implementation was subsequently developed and tested in the existing project. The CSV-loading functionality was retained, and the star coordinates were converted into 3D points for display.
+
+The existing viewport and camera interaction were kept separate from the star-loading logic.
+
+**Testing**
+
+The application was built and tested in Visual Studio. The star catalogue was successfully loaded, and the stars were displayed in the 3D chart.
+
+**Outcome**
+
+The first version of 3D star rendering established the connection between the `StarCollection` data and the HelixToolkit viewport.
+
+**Reflection**
+
+The AI assistant helped identify the relevant HelixToolkit visual class and the general process for converting catalogue coordinates into 3D points. However, the generated code contained namespace, variable-scope and property-usage errors. Reviewing and correcting these errors helped me understand how WPF code-behind interacts with XAML and how 3D visual objects are added to the viewport.
+
+---
+
+## 1.7 Implementing Spectral-Class Colours
+
+| **Item** | **Details** |
+|---|---|
+| **Feature** | Feature 2 – Visualising the Star Chart |
+| **Task** | Apply different colours to stars according to their spectral classes |
+| **AI system** | Llama 3.2 3B Instruct |
+| **AI integration** | AI Studio extension in Visual Studio |
+| **Library** | HelixToolkit.Wpf 3.1.2 |
+| **File** | `MainWindow.xaml.cs` |
+| **Purpose** | Make the different stellar spectral classes visually distinguishable. |
+
+**Original AI Prompt**
+
+```text
+I have a working WPF 3D star chart using HelixToolkit.Wpf 3.1.2 and .NET 10.
+
+My application successfully loads 2,000 stars from bigstarchart.csv and displays them using PointsVisual3D.
+
+I want to implement spectral-class colouring.
+
+Requirements:
+1. O-type stars: Blue.
+2. B-type stars: Blue-white.
+3. A-type stars: White.
+4. F-type stars: Yellow-white.
+5. G-type stars: Yellow.
+6. K-type stars: Orange.
+7. M-type stars: Red.
+8. Unknown or missing spectral classes: Grey.
+
+Please examine my existing MainWindow.xaml.cs implementation and suggest the simplest beginner-friendly way to implement this using HelixToolkit.Wpf.
+
+Important:
+- Preserve the existing CSV loading functionality.
+- Preserve the existing 3D camera controls.
+- Do not change Star.cs or StarCollection.cs.
+- Avoid unnecessary classes or complicated architecture.
+- Explain the proposed changes before providing the complete revised MainWindow.xaml.cs.
+
+I will review the code before using it.
+```
+
+**Complete AI Response – Proposed Changes**
+
+To implement spectral-class coloring, we'll introduce a new `StarColor` enum and modify the existing `StarCollection` class to return a custom `Star` object with an added color property.
+
+1. **Enum for Star Colors:** We will define an enum `StarColors` in `MainWindow.xaml.cs` to represent the different spectral classes.
+2. **Custom Star Object:** The existing `Star` class will remain unchanged, but we'll create a new custom version of it (`CustomStar`) that includes the color property.
+
+**Generated Code**
+
+```csharp
+using System;
+using System.IO;
+using System.Windows.Media.Media3D;
+using HelixToolkit.Wpf;
+
+namespace StellarExplorer1
+{
+    public partial class MainWindow : Window
+    {
+        private StarCollection _starCollection = null;
+
+        // Enum for Star Colors
+        public enum StarColors { O, B, A, F, G, K, M, Unknown };
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            try
+            {
+                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bigstarchart.csv");
+                var starsLoaded = new List<CustomStar>();
+
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException($"The CSV file '{filePath}' does not exist.");
+                }
+
+                _starCollection = new StarCollection(filePath);
+                starsLoaded = _starCollection.GetLoadedStars();
+
+                PointSize = 1.0;
+                Title = $"Stellar Explorer - {starsLoaded.Count} Stars";
+
+                // Map spectral class to color
+                foreach (var star in starsLoaded)
+                {
+                    switch ((StarColors)Enum.Parse(typeof(StarColors), star.Spectral))
+                    {
+                        case StarColors.O:
+                            star.Color = Brushes.Blue;
+                            break;
+                        case StarColors.B:
+                            star.Color = Brushes.BlueWhite;
+                            break;
+                        case StarColors.A:
+                            star.Color = Brushes.White;
+                            break;
+                        case StarColors.F:
+                            star.Color = Brushes.YellowWhite;
+                            break;
+                        case StarColors.G:
+                            star.Color = Brushes.Yellow;
+                            break;
+                        case StarColors.K:
+                            star.Color = Brushes.Orange;
+                            break;
+                        case StarColors.M:
+                            star.Color = Brushes.Red;
+                            break;
+                        default:
+                            star.Color = Brushes.Gray;
+                            break;
+                    }
+                }
+
+                var pointsVisual3D = new PointsVisual3D
+                {
+                    Colors = Brushes.White,
+                    PointSize = 0.2f
+                };
+
+                foreach (var star in starsLoaded)
+                {
+                    Media3D.Point3D point = new Media3D.Point3D(star.X, star.Y, star.Z);
+                    pointsVisual3D.Points.Add(new Point3DCollection(new[] { point }));
+                }
+
+                // Add custom colors to visual
+                pointsVisual3D.Colors.Add(starCollection.GetColors());
+
+                viewport.Content = pointsVisual3D;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occurred while loading the CSV file: {ex.Message}");
+                Environment.Exit(1);
+            }
+        }
+
+        // Custom Star class with added color property
+        public class CustomStar
+        {
+            public double Id { get; set; }
+            public string Name { get; set; }
+            public double Distance { get; set; }
+            public double X { get; set; }
+            public double Y { get; set; }
+            public double Z { get; set; }
+            public string Spect { get; set; } // spectral class
+            public Brush Color { get; set; }
+        }
+
+        private Brush[] GetColors()
+        {
+            var colors = new Brush[StarCollection.Instance.StarCount];
+
+            for (int i = 0; i < StarCollection.Instance.StarCount; i++)
+            {
+                if (StarCollection.Instance.GetSpectralClass(i) == StarColors.O)
+                    colors[i] = Brushes.Blue;
+                else if (StarCollection.Instance.GetSpectralClass(i) == StarColors.B)
+                    colors[i] = Brushes.BlueWhite;
+                else if (StarCollection.Instance.GetSpectralClass(i) == StarColors.A)
+                    colors[i] = Brushes.White;
+                else if (StarCollection.Instance.GetSpectralClass(i) == StarColors.F)
+                    colors[i] = Brushes.YellowWhite;
+                else if (StarCollection.Instance.GetSpectralClass(i) == StarColors.G)
+                    colors[i] = Brushes.Yellow;
+                else if (StarCollection.Instance.GetSpectralClass(i) == StarColors.K)
+                    colors[i] = Brushes.Orange;
+                else if (StarCollection.Instance.GetSpectralClass(i) == StarColors.M)
+                    colors[i] = Brushes.Red;
+                else
+                    colors[i] = Brushes.Gray;
+            }
+
+            return colors;
+        }
+    }
+}
+```
+
+**AI Response – Explanation**
+
+The AI assistant proposed introducing an enum for the spectral classes and a custom star class containing an additional colour property. It then suggested assigning colours based on each star's spectral class using a `switch` statement.
+
+The proposed colour mapping was:
+
+| **Spectral class** | **Suggested colour** |
+|---|---|
+| O | Blue |
+| B | Blue-white |
+| A | White |
+| F | Yellow-white |
+| G | Yellow |
+| K | Orange |
+| M | Red |
+| Unknown | Grey |
+
+**Developer Review and Identified Problems**
+
+The generated response did not correctly follow the requirements of the prompt.
+
+The following issues were identified:
+
+1. It introduced a `CustomStar` class even though the existing `Star` class already contained all required properties.
+2. It attempted to assign `List<Star>` to `List<CustomStar>`, which is not a valid assignment.
+3. It referred to `star.Spectral`, although the existing property is named `Spect`.
+4. It used `Brushes.BlueWhite` and `Brushes.YellowWhite`, which are not standard predefined WPF brushes.
+5. It used an undefined `starCollection` variable.
+6. It referred to `StarCollection.Instance`, `StarCount` and `GetSpectralClass()`, which were not part of the existing `StarCollection` implementation.
+7. It attempted to use `PointsVisual3D.Colors` as though it were a brush collection. This was not the correct approach for the intended implementation.
+8. It did not correctly preserve the existing collection and rendering structure.
+
+**Developer Review and Implementation Decisions**
+
+The proposed custom class and additional enum were unnecessary for this application.
+
+The existing `Star.Spect` property already contains the spectral classification. Therefore, the simpler approach was to determine a colour from that property when rendering the stars.
+
+The implementation was subsequently organised around the existing star collection and HelixToolkit point visuals. The spectral classes were assigned the required colours without modifying `Star.cs` or `StarCollection.cs`.
+
+**Testing**
+
+The application was built and tested after the spectral-colour implementation. The stars were displayed using different colours according to their spectral classes, with grey used for unknown classifications.
+
+**Outcome**
+
+Spectral-class colouring was added to the 3D star chart. This made the different types of stars easier to distinguish visually.
+
+**Reflection**
+
+The AI assistant initially proposed an unnecessarily complicated solution that introduced additional classes and referenced properties and methods that did not exist in the project. Reviewing the code helped me recognise that the existing `Spect` property was sufficient. I chose a simpler implementation that preserved the existing data model and avoided unnecessary changes to other files.
+
+---
+
+## 1.8 Planning the Display of Star Names
+
+| **Item** | **Details** |
+|---|---|
+| **Feature** | Feature 2 – Visualising the Star Chart |
+| **Task** | Plan how to display star names next to their 3D positions |
+| **AI system** | Llama 3.2 3B Instruct |
+| **AI integration** | AI Studio extension in Visual Studio |
+| **Library** | HelixToolkit.Wpf 3.1.2 |
+| **File to be revised** | `MainWindow.xaml.cs` |
+| **Purpose** | Display star names while avoiding excessive labels in the 3D chart. |
+
+**Original AI Prompt**
+
+```text
+My WPF application StellarExplorer1 currently:
+- Loads 2,000 stars from bigstarchart.csv.
+- Displays stars in a HelixToolkit.Wpf 3D viewport.
+- Uses different colours for O, B, A, F, G, K and M spectral classes.
+- Supports mouse rotation and zoom.
+
+I want to implement the next Feature 2 requirement: displaying star names in the 3D star chart.
+
+Requirements:
+1. Display star names next to their corresponding 3D star positions.
+2. Use the existing Star.Name property.
+3. Avoid making the chart overcrowded with 2,000 labels.
+4. Preserve spectral-class colouring.
+5. Preserve existing mouse rotation and zoom functionality.
+6. Use HelixToolkit.Wpf 3.1.2 and .NET 10.
+7. Do not modify Star.cs or StarCollection.cs unless absolutely necessary.
+
+First explain your proposed implementation and which HelixToolkit classes you recommend.
+
+Do not provide revised code yet. I want to review the approach first.
+```
+
+**Complete AI Response – Proposed Implementation**
+
+To implement the star names display feature without overcrowding the chart, we'll use a combination of techniques:
+
+1. **Label Overlap Reduction:** We can rotate the labels slightly away from their corresponding stars to reduce overlap. This is achievable using HelixToolkit's built-in `LabelPlacement` property or by manually adjusting label positions.
+2. **Scatter Label Placement:** Instead of placing labels directly at star positions, we'll use a scatter placement strategy for labels, allowing them to be positioned around the stars without overlapping.
+
+To achieve these goals while preserving existing spectral-class coloring and mouse rotation/zoom functionality:
+
+- We will utilize HelixToolkit's `Label` class as the base for our custom label control. This class is designed specifically for 3D labeling in HelixToolkit.
+- We'll create a custom subclass of `Label`, named `StarLabel`, to enhance its features. This custom label will be used to display star names and will inherit behavior from the original `Label` class.
+- To avoid cluttering the chart, we'll implement a technique called "scatter labeling," where labels are placed at a specified distance from their corresponding stars along a plane.
+
+**Recommended HelixToolkit Classes**
+
+The AI assistant recommended:
+
+- `HelixToolkit.Wpf.Label`: Described as a base class for custom 3D labels.
+- `HelixToolkit.Wpf.LabelPlacement`: Described as a property for controlling label placement.
+- `HelixToolkit.Wpf.Point3D`: Described as the class used to position the labels.
+
+**Developer Review and Evaluation**
+
+The suggested approach required further investigation before implementation.
+
+The response did not provide a clear, verified explanation of how these proposed classes and properties would work with the installed HelixToolkit.Wpf 3.1.2 package.
+
+In particular:
+
+1. The response did not establish that `Label` and `LabelPlacement` were appropriate, available APIs for this implementation.
+2. It proposed creating a custom `StarLabel` class, although the requirement was to avoid unnecessary additional classes.
+3. It did not explain how the suggested scatter-placement technique would be implemented.
+4. It did not provide a practical method for limiting the number of labels displayed.
+5. It did not demonstrate how the proposed labels would remain associated with their corresponding 3D star positions.
+
+**Developer Implementation Decision**
+
+Rather than immediately implementing the suggested custom label system, I considered a simpler approach using the existing `Star.Name` property and HelixToolkit's 3D text visual functionality.
+
+The aim was to display proper star names while avoiding unnecessary labels for stars that only had generated catalogue designations.
+
+This approach would allow the chart to retain its spectral-class colours and existing camera controls.
+
+**Outcome**
+
+The AI assistant provided an initial discussion of possible label-placement techniques. However, its recommendations were not sufficiently verified or detailed to use directly. Further implementation and testing were required to achieve the star-name display requirement.
+
+**Reflection**
+
+This task showed that AI-generated technical recommendations should be checked against the actual library API. The assistant suggested classes and properties without demonstrating that they were suitable for the installed package. I therefore evaluated the suggestions instead of implementing them immediately. This helped me focus on a simpler solution that fitted the existing application structure and avoided unnecessary custom classes.
+
 ---
 
 Feature 2 – 3D Visualising the Star Chart
