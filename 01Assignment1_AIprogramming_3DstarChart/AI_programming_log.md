@@ -135,6 +135,110 @@ Using the AI assistant helped generate the initial model structure and XML docum
 
 1.2 Star collection and CSV loading
 
+### 1.2 StarCollection Class Design
+
+| Item | Details |
+|---|---|
+| **Feature** | Feature 1 – Star Chart |
+| **Task** | Design the responsibilities and methods of the `StarCollection` class |
+| **AI system** | Llama 3.2 3B Instruct |
+| **AI integration** | AI Studio extension in Visual Studio |
+| **Related class** | `Star.cs` |
+| **Data format** | CSV (Comma Separated Values) |
+| **Purpose** | Plan how star catalogue records would be loaded, organised and accessed by the application. |
+
+**Original AI Prompt**
+
+```text
+I am developing StellarExplorer1, a WPF desktop application using C# and .NET 10.
+
+I have already created:
+- Models/Star.cs
+- Models/StarCollection.cs
+
+The Star class contains:
+Id, Name, Distance, X, Y, Z, Magnitude and Spect.
+
+Help me design the StarCollection class for Feature 1 – Star Chart.
+
+The assignment requires:
+
+1. Loading at least 2,000 real star records from a local data file.
+2. Reading and managing Star objects.
+3. Supporting catalogue designations for stars without proper names.
+4. Making the star collection accessible to other parts of the application.
+
+For now:
+- Explain the responsibilities and proposed methods of StarCollection.
+- Recommend a suitable local data format (CSV is acceptable).
+- Explain how missing star names should be handled.
+- Explain how the class should interact with Star.cs.
+- Do not generate code.
+- Do not modify any files.
+
+Keep the design suitable for a beginner-level C# WPF project.
+```
+
+**Complete AI Response**
+
+The `StarCollection` class will be responsible for loading, managing, and providing access to a collection of `Star` objects. Its primary responsibilities include:
+
+1. Loading star data from a local CSV file.
+2. Reading and parsing the CSV file into a list of `Star` objects.
+3. Managing the list of loaded stars (e.g., adding, removing, searching).
+4. Providing a catalog-style interface for retrieving stars by designation.
+
+**Proposed Methods**
+
+- `LoadStarsFromCsv(string filePath)`: Loads star data from a specified CSV file and returns a list of `Star` objects.
+- `AddStar(Star star)`: Adds a new `Star` object to the collection.
+- `RemoveStar(int id)`: Removes a `Star` object by its ID.
+- `GetStarById(int id)`: Retrieves a `Star` object by its ID.
+- `GetStarsByDesignation(string designation)`: Returns a list of `Star` objects matching the specified catalog designation (e.g., "Sirius", "Alpha Centauri").
+
+**Recommended Local Data Format**
+
+A suitable local data format for this project is CSV (Comma Separated Values). CSV files are widely supported and easy to work with, making them an excellent choice for storing star data.
+
+**Handling Missing Star Names**
+
+To handle stars without proper names, you can use catalog designations as a fallback. For example:
+
+- If a star's name is missing, use its designation (e.g., "Alpha Centauri") as the display name.
+- You can also consider using placeholder names or generic labels for unidentified stars.
+
+**Interaction with `Star.cs`**
+
+The `StarCollection` class should interact with the `Star` class as follows:
+
+- The `Star` class will contain properties that match the CSV file's column headers (e.g., `Id`, `Name`, `Distance`, etc.).
+- The `StarCollection` class will load a list of `Star` objects from the CSV file and manage them accordingly.
+- When retrieving stars, the `StarCollection` class will use the `Star` class to access the star's data.
+
+By following this design, you'll be able to create an efficient and accessible `StarCollection` class that complements your `Star` model and supports the catalog-style interface required for Feature 1 – Star Chart.
+
+**Developer Review and Implementation Decisions**
+
+The proposed design provided an initial plan for separating star data management from the WPF user interface.
+
+During implementation, the following decisions were made:
+
+1. The CSV file `bigstarchart.csv` was selected as the local data source.
+2. The existing `Star` model was reused to represent each record.
+3. The collection was stored in a `List<Star>`.
+4. Catalogue designations were used when proper star names were unavailable.
+5. The implemented class provided `GetLoadedStars()` to make the loaded collection accessible to other parts of the application.
+
+The initial design proposed additional methods for adding, removing and searching stars. These were design suggestions and were not all implemented in the final class.
+
+**Outcome**
+
+The design established the responsibilities of `StarCollection` before its implementation. It helped guide the development of the CSV-loading functionality and the integration between `StarCollection.cs` and `Star.cs`.
+
+**Reflection**
+
+The AI assistant helped me plan the structure of the data-management class before writing code. This made it easier to understand the responsibilities of each class and keep the project organised. I then adapted the proposed design to the actual requirements of the application.
+
 1.3 Star catalogue naming
 
 1.4 Testing and debugging
