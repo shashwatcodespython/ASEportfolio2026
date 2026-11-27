@@ -15,13 +15,7 @@ Feature 1 – Star Chart
 | **Feature** |A new star.cs file |
 | **Task** |To create a new star.cs file |
 | **AI system** | Llama 3.2 3B Instruct |
-| **AI prompt** |I am developing a WPF desktop application named StellarExplorer1 using C# and .NET 10.
-
-I am currently implementing Feature 1 – Star Chart.
-
-Help me create a C# model class named Star.cs.
-
-It must contain these properties:
+| **AI prompt** |I am developing a WPF desktop application named StellarExplorer1 using C# and .NET 10. I am currently implementing Feature 1 – Star Chart. Help me create a C# model class named Star.cs. It must contain these properties:
 - int Id
 - string Name
 - double Distance
@@ -30,7 +24,6 @@ It must contain these properties:
 - double Z
 - double Magnitude
 - string Spect
-
 Requirements:
 1. Use public properties with getters and setters.
 2. Use PascalCase naming.
